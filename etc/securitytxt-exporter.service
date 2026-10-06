@@ -1,0 +1,35 @@
+[Unit]
+Description=Prometheus exporter for RFC 9116 security.txt files
+Documentation=https://github.com/digineo/securitytxt-exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+# Set flags via ARGS="..." in this file, see securitytxt-exporter -h.
+EnvironmentFile=-/etc/default/securitytxt-exporter
+ExecStart=/usr/bin/securitytxt-exporter $ARGS
+Restart=on-failure
+
+DynamicUser=yes
+CapabilityBoundingSet=
+PrivateDevices=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+
+# Backstop for DialControl, e.g. cloud metadata at 169.254.169.254. Breaks
+# DNS if /etc/resolv.conf lists a link-local nameserver.
+IPAddressDeny=link-local multicast
+MemoryMax=128M
+
+[Install]
+WantedBy=multi-user.target

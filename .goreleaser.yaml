@@ -1,0 +1,29 @@
+version: 2
+
+project_name: securitytxt-exporter
+
+builds:
+- env:     [CGO_ENABLED=0]
+  goos:    [linux]
+  goarch:  [amd64, arm64]
+  ldflags: [-s -w] # version comes from Go's VCS stamping, see main.go
+
+dockers_v2:
+- images: [ghcr.io/digineo/securitytxt-exporter]
+  tags:   ["{{ .Version }}", latest]
+
+nfpms:
+- formats: [deb, rpm]
+  maintainer:  Dominik Menke <dom+securitytxtexporter@digineo.de>
+  homepage:    https://github.com/digineo/securitytxt-exporter
+  description: Prometheus exporter for RFC 9116 security.txt files
+  license:     MIT
+  contents:
+    - src: etc/securitytxt-exporter.service
+      dst: /usr/lib/systemd/system/securitytxt-exporter.service
+      file_info:
+        mode: 0644
+  scripts:
+    postinstall: etc/postinstall.sh
+    preremove:   etc/preremove.sh
+    postremove:  etc/postremove.sh
