@@ -4,8 +4,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"net/url"
@@ -61,6 +63,7 @@ func main() {
 		Log:       log,
 	}
 	prometheus.MustRegister(collectors.NewBuildInfoCollector())
+	http.Handle("GET /{$}", indexHandler(version))
 	http.Handle("GET /metrics", promhttp.Handler())
 	http.Handle("GET /probe", probeHandler(p))
 
@@ -87,6 +90,10 @@ func probeHandler(p *securitytxt.Prober) http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), probeTimeout(r))
 		defer cancel()
 		res, err := p.Probe(ctx, target, r.URL.Query().Get("fingerprint"))
+		if r.URL.Query().Get("format") == "json" {
+			writeJSON(w, target, res, err)
+			return
+		}
 
 		reg := prometheus.NewRegistry()
 		gauge := func(name, help string, v float64) {
@@ -123,4 +130,63 @@ func probeTimeout(r *http.Request) time.Duration {
 		return maxTimeout
 	}
 	return min(time.Duration((s-0.5)*float64(time.Second)), maxTimeout)
+}
+
+// writeJSON renders a probe result for humans, with the reasons of failures.
+func writeJSON(w http.ResponseWriter, target string, res securitytxt.Result, err error) {
+	type check struct {
+		Valid bool   `json:"valid"`
+		Error string `json:"error,omitempty"`
+	}
+	toCheck := func(err error) check {
+		if err != nil {
+			return check{Error: err.Error()}
+		}
+		return check{Valid: true}
+	}
+
+	out := struct {
+		Target  string           `json:"target"`
+		Success bool             `json:"success"`
+		Error   string           `json:"error,omitempty"`
+		Expires time.Time        `json:"expires,omitzero"`
+		Checks  map[string]check `json:"checks,omitempty"`
+	}{Target: target, Success: err == nil}
+	if err != nil {
+		out.Error = err.Error()
+	} else {
+		out.Expires = res.Expires
+		out.Checks = map[string]check{
+			"signature":    toCheck(res.Signature),
+			"content_type": toCheck(res.ContentType),
+			"canonical":    toCheck(res.Canonical),
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(out) // fails only if the client is gone
+}
+
+var indexTmpl = template.Must(template.New("index").Parse(`<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>securitytxt-exporter</title>
+<h1>securitytxt-exporter</h1>
+<p>Version {{ . }}, source on <a href="https://github.com/digineo/securitytxt-exporter">GitHub</a></p>
+<form method="get" action="probe">
+	<label>Domain <input name="target" placeholder="www.example.com" required></label>
+	<select name="format" aria-label="Format">
+		<option value="prometheus">Prometheus</option>
+		<option value="json">JSON</option>
+	</select>
+	<button>Probe</button>
+</form>
+`))
+
+func indexHandler(version string) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		_ = indexTmpl.Execute(w, version) // fails only if the client is gone
+	}
 }

@@ -26,16 +26,17 @@ func TestProbeHandler(t *testing.T) {
 
 	// httptest TLS servers share one certificate, so either client works.
 	h := probeHandler(&securitytxt.Prober{Client: ok.Client(), Log: xlog.NewDiscard()})
-	get := func(target string) *httptest.ResponseRecorder {
+	get := func(target, format string) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/probe?target="+url.QueryEscape(target), nil))
+		q := url.Values{"target": {target}, "format": {format}}
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/probe?"+q.Encode(), nil))
 		return rec
 	}
 	okTarget := strings.TrimPrefix(ok.URL, "https://")
 	missingTarget := strings.TrimPrefix(missing.URL, "https://")
 
 	t.Run("success", func(t *testing.T) {
-		rec := get(okTarget)
+		rec := get(okTarget, "")
 		assert.Equal(t, http.StatusOK, rec.Code)
 		for _, line := range []string{
 			"securitytxt_probe_success 1",
@@ -49,7 +50,7 @@ func TestProbeHandler(t *testing.T) {
 	})
 
 	t.Run("failure", func(t *testing.T) {
-		rec := get(missingTarget)
+		rec := get(missingTarget, "")
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Contains(t, rec.Body.String(), "securitytxt_probe_success 0\n")
 		assert.NotContains(t, rec.Body.String(), "securitytxt_expires_timestamp_seconds")
@@ -75,10 +76,48 @@ func TestProbeHandler(t *testing.T) {
 
 	for _, target := range []string{"", "host/path", "user@host", "host#x", "https://host"} {
 		t.Run("invalid target "+target, func(t *testing.T) {
-			assert.Equal(t, http.StatusBadRequest, get(target).Code)
+			assert.Equal(t, http.StatusBadRequest, get(target, "").Code)
 		})
 	}
 
+	t.Run("json success", func(t *testing.T) {
+		rec := get(okTarget, "json")
+		assert.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+		assert.JSONEq(t, `{
+			"target": "`+okTarget+`",
+			"success": true,
+			"expires": "2030-01-02T03:04:05Z",
+			"checks": {
+				"signature":    {"valid": false, "error": "not signed"},
+				"content_type": {"valid": true},
+				"canonical":    {"valid": false, "error": "no Canonical field"}
+			}
+		}`, rec.Body.String())
+	})
+
+	t.Run("json failure", func(t *testing.T) {
+		rec := get(missingTarget, "json")
+		assert.JSONEq(t, `{
+			"target": "`+missingTarget+`",
+			"success": false,
+			"error": "GET https://`+missingTarget+`/.well-known/security.txt: 404 Not Found"
+		}`, rec.Body.String())
+	})
+}
+
+func TestIndexHandler(t *testing.T) {
+	rec := httptest.NewRecorder()
+	indexHandler("v1.2.3").ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	assert.Equal(t, http.StatusOK, rec.Code)
+	for _, s := range []string{
+		"Version v1.2.3",
+		`<a href="https://github.com/digineo/securitytxt-exporter">`,
+		`<form method="get" action="probe">`,
+		`<input name="target"`,
+		`<option value="json">`,
+	} {
+		assert.Contains(t, rec.Body.String(), s)
+	}
 }
 
 func TestProbeTimeout(t *testing.T) {
