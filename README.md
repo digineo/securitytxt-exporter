@@ -5,16 +5,18 @@ Prometheus exporter for [RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)
 blackbox_exporter: targets live in the Prometheus scrape config, not in a local
 config file.
 
-## Usage
+## Installation
 
 The exporter listens on `127.0.0.1:2610` by default, see `-h` for flags.
+
+### Go
 
 ```sh
 go install github.com/digineo/securitytxt-exporter@latest
 securitytxt-exporter
 ```
 
-or with Docker:
+### Docker
 
 ```sh
 docker run -p 127.0.0.1:2610:2610 ghcr.io/digineo/securitytxt-exporter
@@ -24,14 +26,20 @@ Inside the container, the image listens on all interfaces, so `-p` decides the
 exposure. Flags passed to the container replace that default, so repeat
 `-web.listen-address :2610` along with them.
 
-or with the `.deb`/`.rpm` packages from the releases. They install, enable and
-start `securitytxt-exporter.service`, which runs as a dynamic user. Flags go
-into `/etc/default/securitytxt-exporter`, e.g. for a Prometheus server on
-another host (firewall the port to that host):
+### Packages
+
+The `.deb`/`.rpm` packages from the releases install, enable and start
+`securitytxt-exporter.service`, which runs as a dynamic user. Flags go into
+`/etc/default/securitytxt-exporter`, e.g. for a Prometheus server on another
+host (firewall the port to that host):
 
 ```sh
 ARGS="-web.listen-address 192.0.2.10:2610"
 ```
+
+## Usage
+
+The exporter serves these endpoints:
 
 - `/probe?target=<host[:port]>` fetches `https://<host>/.well-known/security.txt`
 - `/probe?target=...&fingerprint=<hex>` additionally requires the signature to
