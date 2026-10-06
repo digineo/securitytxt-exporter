@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-06
+
 ### Added
 
 - `/probe?target=<host>` endpoint in the multi-target exporter pattern. It
@@ -21,4 +23,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Release archives, `.deb`/`.rpm` packages with a hardened systemd unit, and
   multi-arch images on `ghcr.io/digineo/securitytxt-exporter`.
 
-[Unreleased]: https://github.com/digineo/securitytxt-exporter/commits/main
+[Unreleased]: https://github.com/digineo/securitytxt-exporter/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/digineo/securitytxt-exporter/releases/tag/v0.1.0
