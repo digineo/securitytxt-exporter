@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/ProtonMail/go-crypto v1.5.2
-	github.com/digineo/xlog v1.1.0
+	github.com/digineo/xlog v1.2.0
 	github.com/digineo/xlog/slogor v1.1.0
 	github.com/miekg/dns v1.1.73
 	github.com/prometheus/client_golang v1.24.1
