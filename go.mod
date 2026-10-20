@@ -4,8 +4,8 @@ go 1.27.1
 
 require (
 	github.com/ProtonMail/go-crypto v1.5.2
-	github.com/digineo/xlog v1.1.0
-	github.com/digineo/xlog/slogor v1.1.0
+	github.com/digineo/xlog v1.2.0
+	github.com/digineo/xlog/slogor v1.2.0
 	github.com/miekg/dns v1.1.73
 	github.com/prometheus/client_golang v1.24.1
 	github.com/stretchr/testify v1.12.1
@@ -24,6 +24,6 @@ require (
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
